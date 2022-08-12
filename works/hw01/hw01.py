@@ -55,7 +55,7 @@ def largest_factor(n):
     """
     "*** YOUR CODE HERE ***"
     a = 2
-    while (n / a) % 1 != 0:
+    while n % a != 0:
         a += 1
 
     return int(n / a)
