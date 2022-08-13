@@ -99,3 +99,152 @@
 - 有效测试的关键是在实现新功能后立即编写（并运行）测试。
 
 - 在实现之前编写一些测试甚至是一种很好的做法，以便在您的脑海中有一些示例输入和输出。
+
+## 高阶函数
+
+接受其他函数作为参数，或将函数作为返回值的函数
+
+#### 将函数作为参数接受
+
+多个函数拥有相似的结构时，则存在这样的抽象可以
+
+```py
+def summation(n, term):
+2        total, k = 0, 1
+3        while k <= n:
+4            total, k = total + term(k), k #term 为传入的函数参数
+5        return total
+6    
+7    def cube(x):
+8        return x*x*x
+9    
+10    def sum_cubes(n):
+11        return summation(n, cube)
+12    
+13    result = sum_cubes(3)
+```
+
+此时我们拥有的一般化的求和函数，只需要传入特定的求和处理就可解决求和问题
+
+#### 作为通用方法的函数
+
+一些函数表达了一般的计算方法，独立于它们调用的特定函数。
+
+```py
+def improve(update, close, guess=1):
+        while not close(guess):
+            guess = update(guess)
+        return guess
+```
+
+这个`improve`函数是重复细化的一般表达。
+
+它没有说明要解决什么问题：这些细节留给作为参数传入的`update`和`close`函数。
+
+以下是一个估计黄金比例的函数：
+
+```py
+1 def improve(update, close, guess=1):
+2        while not close(guess):
+3            guess = update(guess)
+4        return guess
+5    
+6    def golden_update(guess):
+7        return 1/guess + 1
+8    
+9    def square_close_to_successor(guess):
+10        return approx_eq(guess * guess,
+11                         guess + 1)
+12    
+13    def approx_eq(x, y, tolerance=1e-3):
+14        return abs(x - y) < tolerance
+15    
+16    phi = improve(golden_update,
+17                  square_close_to_successor)
+```
+
+#### 嵌套定义
+
+许多细小的函数定义会**污染全局环境**，并且由于函数需要作为内部参数调用，它的**参数形式**会受到约束。
+
+这两个问题的解决方案是**将函数定义放在其他定义的主体中。**
+
+```py
+def sqrt(a):
+        def sqrt_update(x):
+            return average(x, a/x)
+        def sqrt_close(x):
+            return approx_eq(x * x, a)
+        return improve(sqrt_update, sqrt_close)
+```
+
+- 这些函数仅在评估 sqrt 时在范围内。这些本地 def 语句甚至在调用 sqrt 之前都不会被评估。
+
+- 至关重要的是，内部函数可以访问定义它们的环境(父环境)中的名称（而不是调用它们的位置）。
+
+- 在嵌套定义中，我们创建了一个框架链：调用 `sqrt_update` 的环境由三个框架组成：本地 `sqrt_update` 框架、定义 `sqrt_update` 的 sqrt 框架（标记为 f1）和全局框架。
+
+- 
+
+#### 将函数作为返回值
+
+可以实现动态创建函数
+
+```py
+def make_adder(n):
+    """
+    >>>add_three = make_adder(3)
+    >>>add_three(4)
+    7
+    >>>make_adder(2)(3)
+    5
+    """
+    def adder(k):
+        return k + n
+    return adder
+```
+
+#### lambda 表达式
+
+即匿名函数，像是函数的简便声明实现方式
+
+```py
+square = lambda x: x * x
+square(10)  #100
+```
+
+- 可以在实现后赋值给一个变量名
+
+- 也可以立即调用，但由于没有名字，只能立即调用，且只能调用一次
+
+- 与使用`def` 声明函数的不同：内部不能使用自己的函数名称，即不存在函数内在名称
+
+#### 函数装饰器
+
+应用高阶函数作为执行 def 语句的一部分，称为装饰器。
+
+```py
+>>> def trace(fn):
+        def wrapped(x):
+            print('-> ', fn, '(', x, ')')
+            return fn(x)
+        return wrapped
+>>> @trace
+    def triple(x):
+        return 3 * x
+>>> triple(12)
+->  <function triple at 0x102a39848> ( 12 )
+36
+```
+
+定义函数时使用装饰器，则调用该函数时，装饰器会进行预处理
+
+使用装饰器的步骤等价于:
+
+```py
+>>> def triple(x):
+        return 3 * x
+>>> triple = trace(triple)
+```
+
+使用包装函数将定义的函数包装起来，这样调用被包装的函数时，则会在包装函数的环境里执行
