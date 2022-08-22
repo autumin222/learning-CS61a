@@ -174,5 +174,15 @@ def make_anonymous_factorial():
     >>> check(HW_SOURCE_FILE, 'make_anonymous_factorial', ['Assign', 'AugAssign', 'FunctionDef', 'Recursion'])
     True
     """
+    # def func1(f):
+    #     def func2(k):
+    #         return f(f, k))
+    #     return func2
+    # def func3(f, k):
+    #     if k == 1:
+    #         return k
+    #     else:
+    #         return mul(k, f(f, sub(k, 1)))
+    # return func1(func3)
     return (lambda f: lambda k: f(f, k))(lambda f, k: k if k == 1 else mul(k, f(f, sub(k, 1))))
 
