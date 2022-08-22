@@ -3,5 +3,3 @@
 ```bash
 python3 ok --local
 ```
-
-
