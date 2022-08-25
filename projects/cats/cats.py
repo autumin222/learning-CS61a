@@ -1,5 +1,6 @@
 """Typing test implementation"""
 
+from operator import index
 from xml.dom.minidom import Notation
 from utils import lower, split, remove_punctuation, lines_from_file
 from ucb import main, interact, trace
@@ -83,6 +84,14 @@ def accuracy(typed, reference):
     reference_words = split(reference)
     # BEGIN PROBLEM 3
     "*** YOUR CODE HERE ***"
+    rightNum = 0
+    for i in range(min(len(reference_words), len(typed_words))):
+        if reference_words[i] == typed_words[i]:
+            rightNum += 1
+    if len(typed_words) != 0 and len(reference_words) != 0:
+        return rightNum / len(typed_words) * 100
+    else:
+        return 0.0
     # END PROBLEM 3
 
 
@@ -91,6 +100,7 @@ def wpm(typed, elapsed):
     assert elapsed > 0, 'Elapsed time must be positive'
     # BEGIN PROBLEM 4
     "*** YOUR CODE HERE ***"
+    return len(typed) / 5 * 60 / elapsed 
     # END PROBLEM 4
 
 
@@ -101,6 +111,19 @@ def autocorrect(user_word, valid_words, diff_function, limit):
     """
     # BEGIN PROBLEM 5
     "*** YOUR CODE HERE ***"
+    min = 0
+    mindiff = diff_function(user_word, valid_words[min], limit)
+    for k in range(len(valid_words)):
+        if user_word == valid_words[k]:
+            return user_word
+        newdiff = diff_function(user_word, valid_words[k], limit)
+        if newdiff < mindiff:
+            min = k
+            mindiff = newdiff
+    if mindiff > limit:
+        return user_word
+    else:
+        return valid_words[min]
     # END PROBLEM 5
 
 
@@ -110,32 +133,76 @@ def shifty_shifts(start, goal, limit):
     their lengths.
     """
     # BEGIN PROBLEM 6
-    assert False, 'Remove this line'
+    def f(start, goal, limit, diff):
+        if start == '' or goal == '':
+            return len(goal) + len(start) + diff
+        if diff > limit:
+            return diff
+        newdiff = diff + (1 if start[0] != goal[0] else 0)
+        return f(start[1:], goal[1:], limit, newdiff)
+    return f(start, goal, limit, 0)
+    
     # END PROBLEM 6
 
 
 def pawssible_patches(start, goal, limit):
     """A diff function that computes the edit distance from START to GOAL."""
-    assert False, 'Remove this line'
-
-    if ______________: # Fill in the condition
-        # BEGIN
+    # subsequenceList = get_similar_subsequence(start, goal)
+    # return getdiff(subsequenceList, start, goal)
+    if start == goal or limit < 0: # Fill in the condition
         "*** YOUR CODE HERE ***"
-        # END
+        return 0
 
-    elif ___________: # Feel free to remove or add additional cases
-        # BEGIN
-        "*** YOUR CODE HERE ***"
-        # END
+    elif len(start) == 0 or len(goal) == 0:
+        return len(start) + len(goal)
+
+    elif start[0] == goal[0]:
+        return pawssible_patches(start[1:], goal[1:], limit)
 
     else:
-        add_diff = ... # Fill in these lines
-        remove_diff = ...
-        substitute_diff = ...
+        add_diff =  1 + pawssible_patches(start, goal[1:], limit - 1)
+        remove_diff = 1 + pawssible_patches(start[1:], goal, limit - 1) 
+        substitute_diff = 1 + pawssible_patches(start[1:], goal[1:], limit - 1)
         # BEGIN
-        "*** YOUR CODE HERE ***"
-        # END
+        return min(add_diff, remove_diff, substitute_diff)
 
+def get_similar_subsequence(str1, str2):
+    subsequenceList, sub, t = [], '', 0
+    while t < len(str1):
+        for i in range(t, len(str1)):
+            if sub + str1[i] in str2:
+                sub += str1[i]
+            else:
+                if sub != '':
+                    subsequenceList += [sub]
+                    t = i - 1
+                    sub = ''
+                    break
+            print(i, sub)
+            print(subsequenceList)
+            if i == (len(str1) - 1):
+                subsequenceList += [sub]
+                t = len(str1)
+        t += 1
+    return subsequenceList
+
+def getIndex(str, subStr):
+    for i in range(len(str)):
+        if str[i:i + len(subStr)] == subStr:
+            return i
+    return -1
+
+def getdiff(subsequenceList, start, goal):
+    def f(i, start, goal):
+        if i >= len(subsequenceList):
+            return max(len(start), len(goal))
+        startoffset = getIndex(start, subsequenceList[i])
+        goaloffset = getIndex(goal, subsequenceList[i])
+        offset = max(startoffset, goaloffset)
+        newstart = start[startoffset + len(subsequenceList[i]):]
+        newgoal = goal[goaloffset + len(subsequenceList[i]):]
+        return offset + f(i + 1, newstart, newgoal)
+    return f(0, start, goal)
 
 def final_diff(start, goal, limit):
     """A diff function. If you implement this function, it will be used."""
@@ -151,6 +218,15 @@ def report_progress(typed, prompt, user_id, send):
     """Send a report of your id and progress so far to the multiplayer server."""
     # BEGIN PROBLEM 8
     "*** YOUR CODE HERE ***"
+    num = 0
+    for i in range(len(typed)):
+        if typed[i] == prompt[i]:
+            num = i + 1
+        else:
+            break
+    progress = num / len(prompt)
+    send({'id': user_id, 'progress': progress})
+    return progress
     # END PROBLEM 8
 
 
@@ -177,6 +253,11 @@ def time_per_word(times_per_player, words):
     """
     # BEGIN PROBLEM 9
     "*** YOUR CODE HERE ***"
+    time = []
+    for item in times_per_player:
+        time += [[item[i] - item[i - 1] for i in range(1, len(item))]]
+    return game(words, time)
+
     # END PROBLEM 9
 
 
@@ -192,6 +273,20 @@ def fastest_words(game):
     word_indices = range(len(all_words(game)))    # contains an *index* for each word
     # BEGIN PROBLEM 10
     "*** YOUR CODE HERE ***"
+    words = []
+    for _ in range(len(all_times(game))):
+        words += [[]]
+    for wordidx in range(len(all_words(game))):
+        min, minp = time(game, 0, wordidx), 0
+        # print('p0:', min)
+        for playnum in range(1, len(all_times(game))):
+            # print('p',playnum,'', time(game, playnum, wordidx))
+            if time(game, playnum, wordidx) < min:
+                min = time(game, playnum, wordidx)
+                minp = playnum
+        # print(minp,word_at(game, wordidx))
+        words[minp] += [word_at(game, wordidx)]
+    return words
     # END PROBLEM 10
 
 
